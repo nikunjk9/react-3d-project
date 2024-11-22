@@ -19,7 +19,7 @@ function App() {
       {/* Canvas containing the Earth */}
       <div className="canvas-container">
         <Canvas camera={{ position: [0, 0, 10], fov: 45 }}>
-          <ambientLight intensity={0.3} />
+          <ambientLight intensity={0.01} />
           <directionalLight position={[10, 10, 10]} intensity={1} />
           
           <OrbitControls 
