@@ -2,7 +2,7 @@ import { useState, Suspense} from 'react'
 import reactLogo from './assets/react.svg'
 import viteLogo from '/vite.svg'
 import './App.css'
-import { EffectComposer, Bloom } from '@react-three/postprocessing';
+
 
 import { Canvas } from '@react-three/fiber'
 import { Environment, OrbitControls } from '@react-three/drei'
@@ -20,7 +20,7 @@ function App() {
 
 
         {/* Remove zoom property by false */}
-        <OrbitControls enableZoom={true}/>
+        <OrbitControls enableZoom={false}/>
 
         {/* Load the Earth component */}
         <Suspense fallback={null}>
@@ -30,7 +30,7 @@ function App() {
         {/* Add environment lighting */}
         <Environment preset='night'/>
       </Canvas>
-      
+
     </>
   )
 }

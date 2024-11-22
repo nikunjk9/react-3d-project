@@ -17,36 +17,59 @@ export default function Model(props) {
   const newDelhiRef = useRef(); // Reference for New Delhi
   const { nodes, materials } = useGLTF('/earth.gltf')
 
+  // Variables for blinking effect
+  const blinkState = useRef({
+    intensity: 1.5,
+    direction: -1, // Decreasing initially
+  });
+
   useFrame(() => {
+    // Rotate the Earth
     if (mesh.current) {
       mesh.current.rotation.y += 0.001; // Adjust rotation speed if needed
     }
+
+    // Update blinking effect for the marker
+    if (newDelhiRef.current) {
+      const { intensity, direction } = blinkState.current;
+
+      // Update intensity
+      blinkState.current.intensity += direction * 0.05;
+
+      // Reverse direction if intensity hits bounds
+      if (blinkState.current.intensity > 2 || blinkState.current.intensity < 0.5) {
+        blinkState.current.direction *= -1;
+      }
+
+      // Apply the intensity to the material
+      newDelhiRef.current.material.emissiveIntensity = blinkState.current.intensity;
+    }
   });
 
-  const radius = 1.128;
+  const radius = 2.5; // Adjust to match the Earth's scale
   const lat = (29.2000 * Math.PI) / 180; // Latitude in radians
-  const lon = (13.4090 * Math.PI) / 180; // Longitude in radians
+  const lon = (13.4090 * Math.PI) / 180; // Longitude of New Delhi in radians
 
-  // Correct Cartesian coordinates
+  // Calculate Cartesian coordinates
   const x = radius * Math.cos(lat) * Math.sin(lon);
   const y = radius * Math.sin(lat);
   const z = -radius * Math.cos(lat) * Math.cos(lon);
 
   return (
     <group ref={mesh} {...props} dispose={null}>
-      {/* Globe */}
+      {/* Earth Model */}
       <mesh
         geometry={nodes.Object_4.geometry}
-        material={materials["Scene_-_Root"]}
-        scale={1.128}
+        material={materials['Scene_-_Root']}
+        scale={2.5}
       />
 
-      {/* New Delhi Glow */}
-      <mesh ref={newDelhiRef} position={[x, y, z]} scale={[0.09, 0.09, 0.09]}>
-        <sphereGeometry args={[0.05, 32, 32]} />
+      {/* New Delhi Marker */}
+      <mesh ref={newDelhiRef} position={[x, y, z]} scale={[0.15, 0.15, 0.15]}>
+        <sphereGeometry args={[0.1, 32, 32]} />
         <meshStandardMaterial
           emissive="#FF0000"
-          emissiveIntensity={5}
+          emissiveIntensity={1.5} // Initial emissive intensity
           color="#FF0000"
         />
       </mesh>
@@ -54,6 +77,4 @@ export default function Model(props) {
   );
 }
 
-useGLTF.preload("/earth.gltf");
-
-
+useGLTF.preload('/earth.gltf');
