@@ -2,6 +2,7 @@ import { useState, Suspense} from 'react'
 import reactLogo from './assets/react.svg'
 import viteLogo from '/vite.svg'
 import './App.css'
+import Stars from './Stars';
 
 
 import { Canvas } from '@react-three/fiber'
@@ -15,7 +16,7 @@ function App() {
     <>
     
       <Canvas>
-        <ambientLight intensity={0.5}/>
+        <ambientLight intensity={1}/>
         <directionalLight position={[10, 10, 10]} intensity={1} />
 
 
@@ -25,6 +26,7 @@ function App() {
         {/* Load the Earth component */}
         <Suspense fallback={null}>
           <Earth/>
+          <Stars /> 
         </Suspense>
 
         {/* Add environment lighting */}

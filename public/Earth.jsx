@@ -19,7 +19,7 @@ export default function Model(props) {
 
   // Variables for blinking effect
   const blinkState = useRef({
-    intensity: 1.5,
+    intensity: 0.5,
     direction: -1, // Decreasing initially
   });
 
@@ -46,7 +46,7 @@ export default function Model(props) {
     }
   });
 
-  const radius = 2.5; // Adjust to match the Earth's scale
+  const radius = 2.19; // Adjust to match the Earth's scale
   const lat = (29.2000 * Math.PI) / 180; // Latitude in radians
   const lon = (13.4090 * Math.PI) / 180; // Longitude of New Delhi in radians
 
@@ -61,7 +61,7 @@ export default function Model(props) {
       <mesh
         geometry={nodes.Object_4.geometry}
         material={materials['Scene_-_Root']}
-        scale={2.5}
+        scale={2.2}
       />
 
       {/* New Delhi Marker */}

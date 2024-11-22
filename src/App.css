@@ -9,15 +9,8 @@ Canvas {
 }
 
 
-.container{
-    max-width: 960px;
-    margin: 0 auto;
-    padding: 1rem;
-    background-color: #333;
-    color: #fff;
-    border-radius: 10;
-    border-radius: 20px
-
-
-
-}
+body {
+    background-color: black;
+    margin: 0;
+    overflow: hidden;
+  }
