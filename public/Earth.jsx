@@ -88,7 +88,7 @@ export default function Model(props) {
           transparent={true}
           uniforms={{
             glowColor: { value: new THREE.Color('#4b97fc') },
-            intensity: { value: 1 },
+            intensity: { value: 2.5 },
           }}
           vertexShader={`
             varying vec3 vNormal;
