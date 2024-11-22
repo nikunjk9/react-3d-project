@@ -8,71 +8,117 @@ Title: Earth
 */
 
 
-import React, { useRef } from 'react';
+import React, { useRef, useMemo  } from 'react';
 import { useGLTF } from '@react-three/drei'
 import { useFrame } from '@react-three/fiber';
 
 export default function Model(props) {
   const mesh = useRef();
-  const newDelhiRef = useRef(); // Reference for New Delhi
-  const { nodes, materials } = useGLTF('/earth.gltf')
+  const { nodes, materials } = useGLTF('/earth.gltf');
 
-  // Variables for blinking effect
-  const blinkState = useRef({
-    intensity: 0.5,
-    direction: -1, // Decreasing initially
+  // Create multiple marker references for the ripple effect
+  const markerRefs = useMemo(() => ({
+    core: useRef(),
+    ripple1: useRef(),
+    ripple2: useRef(),
+    ripple3: useRef(),
+    ripple4: useRef(), // Added an extra ripple for more dramatic effect
+  }), []);
+
+  // Animation state management
+  const animationState = useRef({
+    coreIntensity: 2.0,
+    ripples: [
+      { scale: 1, opacity: 1, speed: 0.02 },
+      { scale: 1, opacity: 1, speed: 0.02, delay: 0.25 },
+      { scale: 1, opacity: 1, speed: 0.02, delay: 0.5 },
+      { scale: 1, opacity: 1, speed: 0.02, delay: 0.75 }
+    ]
   });
 
-  useFrame(() => {
+  useFrame((state, delta) => {
     // Rotate the Earth
     if (mesh.current) {
-      mesh.current.rotation.y += 0.001; // Adjust rotation speed if needed
+      mesh.current.rotation.y += 0.001;
     }
 
-    // Update blinking effect for the marker
-    if (newDelhiRef.current) {
-      const { intensity, direction } = blinkState.current;
+    // Animate the core marker with stronger pulse
+    if (markerRefs.core.current) {
+      animationState.current.coreIntensity = 2.0 + Math.sin(state.clock.elapsedTime * 2) * 0.8;
+      markerRefs.core.current.material.emissiveIntensity = animationState.current.coreIntensity;
+    }
 
-      // Update intensity
-      blinkState.current.intensity += direction * 0.05;
+    // Animate the ripples
+    animationState.current.ripples.forEach((ripple, index) => {
+      const rippleRef = markerRefs[`ripple${index + 1}`].current;
+      if (rippleRef) {
+        // Update scale and opacity with longer animation cycle
+        let time = (state.clock.elapsedTime + (ripple.delay || 0));
+        
+        // Longer 3-second cycle for more dramatic effect
+        const cycleTime = time % 3;
+        
+        // Calculate scale (1 to 8 - much larger than before)
+        ripple.scale = 1 + (cycleTime * 2.5);
+        
+        // Calculate opacity (1 to 0) with longer fade
+        ripple.opacity = Math.max(0, 1 - (cycleTime * 0.33));
 
-      // Reverse direction if intensity hits bounds
-      if (blinkState.current.intensity > 2 || blinkState.current.intensity < 0.5) {
-        blinkState.current.direction *= -1;
+        // Apply the values
+        rippleRef.scale.set(ripple.scale, ripple.scale, ripple.scale);
+        rippleRef.material.opacity = ripple.opacity;
       }
-
-      // Apply the intensity to the material
-      newDelhiRef.current.material.emissiveIntensity = blinkState.current.intensity;
-    }
+    });
   });
 
-  const radius = 2.19; // Adjust to match the Earth's scale
-  const lat = (29.2000 * Math.PI) / 180; // Latitude in radians
-  const lon = (13.4090 * Math.PI) / 180; // Longitude of New Delhi in radians
-
-  // Calculate Cartesian coordinates
+  // Calculate position for New Delhi
+  const radius = 2.19;
+  const lat = (28.6139 * Math.PI) / 180; // New Delhi latitude
+  const lon = (165.2090 * Math.PI) / 180; // New Delhi longitude
   const x = radius * Math.cos(lat) * Math.sin(lon);
   const y = radius * Math.sin(lat);
-  const z = -radius * Math.cos(lat) * Math.cos(lon);
+  const z = radius * Math.cos(lat) * Math.cos(lon);
 
   return (
     <group ref={mesh} {...props} dispose={null}>
       {/* Earth Model */}
-      <mesh
-        geometry={nodes.Object_4.geometry}
-        material={materials['Scene_-_Root']}
-        scale={2.2}
+      <mesh 
+        geometry={nodes.Object_4.geometry} 
+        material={materials['Scene_-_Root']} 
+        scale={2.2} 
       />
 
-      {/* New Delhi Marker */}
-      <mesh ref={newDelhiRef} position={[x, y, z]} scale={[0.15, 0.15, 0.15]}>
-        <sphereGeometry args={[0.1, 32, 32]} />
+      {/* Core Marker - Made larger */}
+      <mesh
+        ref={markerRefs.core}
+        position={[x, y, z]}
+      >
+        <sphereGeometry args={[0.03, 16, 16]} />
         <meshStandardMaterial
-          emissive="#FF0000"
-          emissiveIntensity={1.5} // Initial emissive intensity
-          color="#FF0000"
+          color="#FF3333"
+          emissive="#FF3333"
+          emissiveIntensity={2.0}
         />
       </mesh>
+
+      {/* Ripple Effects - Now with 4 layers and larger initial size */}
+      {[1, 2, 3, 4].map((index) => (
+        <mesh
+          key={`ripple${index}`}
+          ref={markerRefs[`ripple${index}`]}
+          position={[x, y, z]}
+        >
+          <sphereGeometry args={[0.025, 32, 32]} />
+          <meshStandardMaterial
+            color="#FF3333"
+            emissive="#FF3333"
+            emissiveIntensity={1.2}
+            transparent={true}
+            opacity={1}
+            depthWrite={false} // Improved transparency rendering
+          />
+        </mesh>
+      ))}
     </group>
   );
 }
