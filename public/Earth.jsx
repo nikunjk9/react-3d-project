@@ -8,117 +8,186 @@ Title: Earth
 */
 
 
-import React, { useRef, useMemo  } from 'react';
-import { useGLTF } from '@react-three/drei'
+import React, { useRef, useState } from 'react';
+import { Html, useGLTF } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
+import * as THREE from 'three';
 
 export default function Model(props) {
   const mesh = useRef();
+
+  // Load the Earth model
   const { nodes, materials } = useGLTF('/earth.gltf');
 
-  // Create multiple marker references for the ripple effect
-  const markerRefs = useMemo(() => ({
+  // Marker references for ripple animations
+  const markerRefs = {
     core: useRef(),
     ripple1: useRef(),
     ripple2: useRef(),
     ripple3: useRef(),
-    ripple4: useRef(), // Added an extra ripple for more dramatic effect
-  }), []);
+    ripple4: useRef(),
+  };
 
-  // Animation state management
+  // Animation state for ripples
   const animationState = useRef({
-    coreIntensity: 2.0,
     ripples: [
       { scale: 1, opacity: 1, speed: 0.02 },
       { scale: 1, opacity: 1, speed: 0.02, delay: 0.25 },
       { scale: 1, opacity: 1, speed: 0.02, delay: 0.5 },
-      { scale: 1, opacity: 1, speed: 0.02, delay: 0.75 }
+      { scale: 1, opacity: 1, speed: 0.02, delay: 0.75 },
     ]
   });
 
-  useFrame((state, delta) => {
-    // Rotate the Earth
+  // Hover state for showing the information box
+  const [isHovered, setIsHovered] = useState(false);
+
+  useFrame((state) => {
+    // Rotate the Earth model continuously
     if (mesh.current) {
       mesh.current.rotation.y += 0.001;
     }
 
-    // Animate the core marker with stronger pulse
-    if (markerRefs.core.current) {
-      animationState.current.coreIntensity = 2.0 + Math.sin(state.clock.elapsedTime * 2) * 0.8;
-      markerRefs.core.current.material.emissiveIntensity = animationState.current.coreIntensity;
-    }
-
-    // Animate the ripples
+    // Animate ripples based on the elapsed time
     animationState.current.ripples.forEach((ripple, index) => {
       const rippleRef = markerRefs[`ripple${index + 1}`].current;
       if (rippleRef) {
-        // Update scale and opacity with longer animation cycle
-        let time = (state.clock.elapsedTime + (ripple.delay || 0));
-        
-        // Longer 3-second cycle for more dramatic effect
+        const time = state.clock.elapsedTime + (ripple.delay || 0);
         const cycleTime = time % 3;
-        
-        // Calculate scale (1 to 8 - much larger than before)
-        ripple.scale = 1 + (cycleTime * 2.5);
-        
-        // Calculate opacity (1 to 0) with longer fade
-        ripple.opacity = Math.max(0, 1 - (cycleTime * 0.33));
 
-        // Apply the values
+        ripple.scale = 1 + (cycleTime * 3);  // Increase ripple size
+        ripple.opacity = Math.max(0, 1 - (cycleTime * 0.33));
         rippleRef.scale.set(ripple.scale, ripple.scale, ripple.scale);
         rippleRef.material.opacity = ripple.opacity;
       }
     });
   });
 
-  // Calculate position for New Delhi
+  // New Delhi marker position
   const radius = 2.19;
-  const lat = (28.6139 * Math.PI) / 180; // New Delhi latitude
-  const lon = (165.2090 * Math.PI) / 180; // New Delhi longitude
-  const x = radius * Math.cos(lat) * Math.sin(lon);
-  const y = radius * Math.sin(lat);
-  const z = radius * Math.cos(lat) * Math.cos(lon);
+  const markerOffset = 0.1; // Slight offset for the marker
+  const lat = (28.6139 * Math.PI) / 180; // Latitude
+  const lon = (165.2090 * Math.PI) / 180; // Longitude
+  const x = (radius + markerOffset) * Math.cos(lat) * Math.sin(lon);
+  const y = (radius + markerOffset) * Math.sin(lat);
+  const z = (radius + markerOffset) * Math.cos(lat) * Math.cos(lon);
 
   return (
     <group ref={mesh} {...props} dispose={null}>
       {/* Earth Model */}
-      <mesh 
-        geometry={nodes.Object_4.geometry} 
-        material={materials['Scene_-_Root']} 
-        scale={2.2} 
+      <mesh
+        geometry={nodes.Object_4.geometry}
+        material={materials['Scene_-_Root']}
+        scale={2.2}
       />
 
-      {/* Core Marker - Made larger */}
-      <mesh
-        ref={markerRefs.core}
-        position={[x, y, z]}
-      >
-        <sphereGeometry args={[0.03, 16, 16]} />
-        <meshStandardMaterial
-          color="#FF3333"
-          emissive="#FF3333"
-          emissiveIntensity={2.0}
+      {/* Atmosphere Glow */}
+      <mesh scale={2.25}>
+        <sphereGeometry args={[1, 32, 32]} />
+        <shaderMaterial
+          blending={THREE.AdditiveBlending}
+          transparent={true}
+          uniforms={{
+            glowColor: { value: new THREE.Color('#4b97fc') },
+            intensity: { value: 1 },
+          }}
+          vertexShader={`
+            varying vec3 vNormal;
+            void main() {
+              vNormal = normalize(normalMatrix * normal);
+              gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+            }
+          `}
+          fragmentShader={`
+            varying vec3 vNormal;
+            uniform vec3 glowColor;
+            uniform float intensity;
+
+            void main() {
+              float intensityFactor = pow(1.0 - dot(vNormal, vec3(0.0, 0.0, 1.0)), intensity);
+              gl_FragColor = vec4(glowColor, intensityFactor);
+            }
+          `}
         />
       </mesh>
 
-      {/* Ripple Effects - Now with 4 layers and larger initial size */}
+      {/* Core Marker */}
+      <mesh
+        ref={markerRefs.core}
+        position={[x, y, z]}
+        onPointerOver={() => setIsHovered(true)} // Show box on hover
+        onPointerOut={() => setIsHovered(false)} // Hide box when not hovering
+      >
+        <sphereGeometry args={[0.05, 16, 16]} />
+        <meshStandardMaterial
+          color="#FF4500"
+          emissive="#FF6347"
+          emissiveIntensity={2.5}
+        />
+      </mesh>
+
+      {/* Ripple Effects with Larger Size */}
       {[1, 2, 3, 4].map((index) => (
         <mesh
           key={`ripple${index}`}
           ref={markerRefs[`ripple${index}`]}
           position={[x, y, z]}
         >
-          <sphereGeometry args={[0.025, 32, 32]} />
+          <sphereGeometry args={[0.028, 32, 32]} /> {/* Increased ripple size */}
           <meshStandardMaterial
-            color="#FF3333"
-            emissive="#FF3333"
-            emissiveIntensity={1.2}
+            color="#de7d8b"
+            emissive="#de7d8b"
+            emissiveIntensity={1.5}
             transparent={true}
             opacity={1}
-            depthWrite={false} // Improved transparency rendering
+            depthWrite={false}
           />
         </mesh>
       ))}
+
+      {/* Invisible Hover Area */}
+      <mesh
+        position={[x, y, z]}
+        scale={4.5} // Increase the scale to make the hover area larger
+        onPointerOver={() => setIsHovered(true)}
+        onPointerOut={() => setIsHovered(false)}
+      >
+        <sphereGeometry args={[0.1, 32, 32]} /> {/* Invisible hitbox */}
+        <meshBasicMaterial transparent opacity={0} />
+      </mesh>
+
+      {/* Information Box */}
+      {isHovered && (
+        <Html position={[x, y + 0.2, z]}>
+          <div
+            style={{
+              background: 'white', // Set background color to white
+              color: 'black', // Default text color black
+              padding: '10px',
+              borderRadius: '8px',
+              fontSize: '12px',
+              whiteSpace: 'nowrap',
+              textAlign: 'center'
+            }}
+          >
+            <strong
+              style={{
+                color: 'blue', // Make "New Delhi" text blue
+                fontWeight: 'bold', // Make "New Delhi" text bold
+              }}
+            >
+              New Delhi
+            </strong>
+            <br />
+            <span
+              style={{
+                color: 'black', // Make the other text black
+              }}
+            >
+              44, Regal Building Connaught Place
+            </span>
+          </div>
+        </Html>
+      )}
     </group>
   );
 }
